@@ -12,9 +12,9 @@ from openpyxl.utils import column_index_from_string, get_column_letter
 st.set_page_config(page_title="Integrated RTC & NHPC Power Models", page_icon="⚡", layout="wide")
 
 @st.cache_data
-def load_data_nhpc(path, sheet, skip_rows):
-    """Helper function exclusively for the NHPC 25-Year Model"""
-    return pd.read_excel(path, sheet_name=sheet, skiprows=skip_rows - 1, header=None, engine="openpyxl")
+def load_data_nhpc(uploaded_file, sheet, skip_rows):
+    """Helper function exclusively for the NHPC 25-Year Model using uploaded file"""
+    return pd.read_excel(uploaded_file, sheet_name=sheet, skiprows=skip_rows - 1, header=None, engine="openpyxl")
 
 
 # =========================================================================================
@@ -23,8 +23,9 @@ def load_data_nhpc(path, sheet, skip_rows):
 def run_model_1_rtc_v3():
     st.title("⚡ PPA RTC Power Model (Seasonal Compliance & DFR)")
 
-    st.sidebar.header("📁 Raw Data Sheet Coordinates Lock")
-    excel_file_path = st.sidebar.text_input("Excel File Path", value=r"C:\Users\ManjeetSingh\Downloads\SECI_RTC 5_Model_V3.xlsm", key="m1_path")
+    st.sidebar.header("📁 Raw Data Upload")
+    # CHANGED: Replaced local text path with a file uploader
+    uploaded_file = st.sidebar.file_uploader("Upload Raw Data Excel File (.xlsx, .xlsm)", type=["xlsx", "xlsm"], key="m1_file")
     sheet_name = st.sidebar.text_input("Sheet Name", value="Raw Data", key="m1_sheet")
 
     wind_col_letter = st.sidebar.text_input("📊 WIND Per-Unit (PU) Column Letter", value="C", key="m1_wcol")
@@ -86,9 +87,10 @@ def run_model_1_rtc_v3():
     }
     st.table(pd.DataFrame(mapping_data))
 
-    if os.path.exists(excel_file_path):
+    # CHANGED: Check if file is uploaded instead of local path existence
+    if uploaded_file is not None:
         try:
-            df_raw = pd.read_excel(excel_file_path, sheet_name=sheet_name, skiprows=int(data_start_row - 1), header=None, engine="openpyxl")
+            df_raw = pd.read_excel(uploaded_file, sheet_name=sheet_name, skiprows=int(data_start_row - 1), header=None, engine="openpyxl")
             df = pd.DataFrame()
             
             generated_timestamps = pd.date_range(start="1990-01-01 00:00", periods=len(df_raw), freq="15min")
@@ -314,7 +316,7 @@ def run_model_1_rtc_v3():
         except Exception as e:
             st.error(f"Error processing data mapping pipelines: {e}")
     else:
-        st.warning("Awaiting file link at configuration target path.")
+        st.info("👆 Please upload the raw data Excel file in the sidebar to proceed.")
 
 
 # =========================================================================================
@@ -323,8 +325,9 @@ def run_model_1_rtc_v3():
 def run_model_2_rtc_v2():
     st.title("⚡ PPA RTC Power Model (Standard DFR Engine)")
 
-    st.sidebar.header("📁 Raw Data Sheet Coordinates Lock")
-    excel_file_path = st.sidebar.text_input("Excel File Path", value=r"C:\Users\ManjeetSingh\Downloads\SECI_RTC 5_Model_V2.xlsm", key="m2_path")
+    st.sidebar.header("📁 Raw Data Upload")
+    # CHANGED: Replaced local text path with a file uploader
+    uploaded_file = st.sidebar.file_uploader("Upload Raw Data Excel File (.xlsx, .xlsm)", type=["xlsx", "xlsm"], key="m2_file")
     sheet_name = st.sidebar.text_input("Sheet Name", value="Raw Data", key="m2_sheet")
 
     wind_col_letter = st.sidebar.text_input("📊 WIND Per-Unit (PU) Column Letter", value="C", key="m2_wcol")
@@ -382,9 +385,10 @@ def run_model_2_rtc_v2():
     }
     st.table(pd.DataFrame(mapping_data))
 
-    if os.path.exists(excel_file_path):
+    # CHANGED: Check if file is uploaded instead of local path existence
+    if uploaded_file is not None:
         try:
-            df_raw = pd.read_excel(excel_file_path, sheet_name=sheet_name, skiprows=int(data_start_row - 1), header=None, engine="openpyxl")
+            df_raw = pd.read_excel(uploaded_file, sheet_name=sheet_name, skiprows=int(data_start_row - 1), header=None, engine="openpyxl")
             df = pd.DataFrame()
             
             generated_timestamps = pd.date_range(start="1990-01-01 00:00", periods=len(df_raw), freq="15min")
@@ -557,7 +561,7 @@ def run_model_2_rtc_v2():
         except Exception as e:
             st.error(f"Error processing data mapping pipelines: {e}")
     else:
-        st.warning("Awaiting file link at configuration target path.")
+        st.info("👆 Please upload the raw data Excel file in the sidebar to proceed.")
 
 
 # =========================================================================================
@@ -579,22 +583,23 @@ def run_model_3_nhpc_25yr():
         pcs_rating = st.number_input("PCS Rating (MW)", value=65.0, step=1.0, key="m3_pcs")
 
     with st.sidebar.expander("📁 Efficiency & 25-Yr BESS Loader", expanded=True):
-        constants_file_path = st.text_input("Constants File Path", value=r"C:\Users\ManjeetSingh\Downloads\Copy of Loss Sheet.xlsx", key="m3_constpath")
+        # CHANGED: Replaced local text path with a file uploader
+        uploaded_constants = st.file_uploader("Upload Constants/Loss Assumption Excel File", type=["xlsx", "xlsm"], key="m3_constfile")
         constants_sheet_name = st.text_input("Constants Sheet Name", value="Loss Assumption", key="m3_constsheet")
         
         AC_to_DC_eff = manual_AC_to_DC
         DC_to_AC_eff = manual_DC_to_AC
         bess_lifetime_capacities = [bess_usable_capacity] * 25
         
-        if os.path.exists(constants_file_path):
+        if uploaded_constants is not None:
             df_const = None
             try:
-                df_const = pd.read_excel(constants_file_path, sheet_name=constants_sheet_name, header=None, engine="openpyxl")
+                df_const = pd.read_excel(uploaded_constants, sheet_name=constants_sheet_name, header=None, engine="openpyxl")
             except Exception:
                 try:
-                    df_const = pd.read_excel(constants_file_path, sheet_name=constants_sheet_name, header=None)
+                    df_const = pd.read_excel(uploaded_constants, sheet_name=constants_sheet_name, header=None)
                 except Exception as inner_e:
-                    st.sidebar.warning(f"Using manual configurations. Info: {inner_e}")
+                    st.warning(f"Using manual configurations. Info: {inner_e}")
             
             if df_const is not None:
                 try:
@@ -619,7 +624,7 @@ def run_model_3_nhpc_25yr():
                 except Exception as calc_e:
                     st.error(f"Structure index mapping mismatch: {calc_e}")
         else:
-            st.warning("Constants path not detected. Running standard baseline profiles.")
+            st.warning("Constants file not uploaded. Running standard baseline profiles.")
 
     with st.sidebar.expander("📉 Resource Scale Modifiers", expanded=True):
         solar_p = st.selectbox("Solar Probability Factor Scenario", options=["P50", "P75", "P90"], index=0, key="m3_sp")
@@ -651,7 +656,8 @@ def run_model_3_nhpc_25yr():
         evening_peak_range = st.slider("Evening Peak Bracket (Hours)", min_value=12.0, max_value=24.0, value=(19.0, 21.0), step=0.25, key="m3_epr")
 
     with st.sidebar.expander("📁 Data Source & Column Setup", expanded=True):
-        excel_file_path = st.text_input("Excel File Path", value=r"C:\Users\ManjeetSingh\Downloads\NHPC_Model_15 Min_V2.1 (1).xlsm", key="m3_ep")
+        # CHANGED: Replaced local text path with a file uploader
+        uploaded_file = st.file_uploader("Upload Main Raw Data Excel File", type=["xlsx", "xlsm"], key="m3_mainfile")
         sheet_name = st.text_input("Sheet Name", value="Sheet1", key="m3_sn")
         data_start_row = st.number_input("Data Starts on Row", value=2, min_value=1, step=1, key="m3_dsr")
         wind_col_letter = st.text_input("Wind Column Letter", value="C", key="m3_wcl")
@@ -660,10 +666,10 @@ def run_model_3_nhpc_25yr():
     wind_idx = column_index_from_string(wind_col_letter) - 1
     solar_idx = column_index_from_string(solar_col_letter) - 1
 
-    if os.path.exists(excel_file_path):
+    if uploaded_file is not None:
         with st.spinner("Executing Independent P-Factor 25-Year Lifecycle Matrix..."):
             try:
-                df_raw = load_data_nhpc(excel_file_path, sheet_name, data_start_row)
+                df_raw = load_data_nhpc(uploaded_file, sheet_name, data_start_row)
                 df_base = pd.DataFrame()
                 
                 max_cols = len(df_raw.columns)
@@ -900,7 +906,7 @@ def run_model_3_nhpc_25yr():
             except Exception as e:
                 st.error(f"Error processing 25-Year simulation lifecycle: {e}")
     else:
-        st.warning(f"Waiting for raw profile logs link at path: {excel_file_path}")
+        st.info("👆 Please upload the raw data Excel file in the sidebar to proceed.")
 
 
 # =========================================================================================
